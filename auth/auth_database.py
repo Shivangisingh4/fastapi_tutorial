@@ -4,7 +4,7 @@ from urllib.parse import quote_plus
 import os
 
 MYSQL_USER=os.getenv("MYSQL_USER", "root")
-MYSQL_PASSWORD=os.getenv("MYSQL_PASSWORD", "shiggu1234@")
+MYSQL_PASSWORD=quote_plus(os.getenv("MYSQL_PASSWORD", "shiggu1234@"))
 MYSQL_HOST=os.getenv("MYSQL_HOST", "db")
 MYSQL_PORT=os.getenv("MYSQL_PORT", "3306")
 MYSQL_DATABASE=os.getenv("MYSQL_DATABASE", "fastapi_db")

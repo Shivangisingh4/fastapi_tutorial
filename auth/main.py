@@ -33,13 +33,13 @@ def register_user(user: schemas.UserCreate, db: Session= Depends(get_db)):
     # plain password is saved as hashed password in database
     # Hash the password
 
-    hased_pass= utils.hash_password(user.password)
+    hashed_pass= utils.hash_password(user.password)
 
     #create now user instance
     new_user= models.User(
         username= user.username,
         email= user.email,
-        hased_password=hased_pass,  
+        hashed_password=hashed_pass,  
         role=user.role
     )
 
@@ -53,24 +53,24 @@ def register_user(user: schemas.UserCreate, db: Session= Depends(get_db)):
 
 @app.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db:Session= Depends(get_db)):
-    user=db.query(models.user).filter(models.User.username==form_data.username).first()
+    user=db.query(models.User).filter(models.User.username==form_data.username).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Username")
     
-    if not utils.verify_password(form_data.password, user.hased_password):
+    if not utils.verify_password(form_data.password, user.hashed_password):
         raise HTTPException(status_code= status.HTTP_401_UNAUTHORIZED, detail="Invalid Password")
     
     
     token_data={'sub':user.username, 'role':user.role}
     token= create_access_token(token_data)
-    return {"access_toke":token, "token_type":"bearer" }
+    return {"access_token":token, "token_type":"bearer" }
 
 oauth2_scheme=OAuth2PasswordBearer(tokenUrl="login")
 def get_current_user(token: str=Depends(oauth2_scheme)):
-    credential_exception= HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credential",headers={"WWW.Authenticate":"Bearer"})
+    credential_exception= HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credential",headers={"WWW-Authenticate":"Bearer"})
 
     try:
-        payload= jwt.decode(token,SECRET_KEY, algorithms=ALGORITHM)
+        payload= jwt.decode(token,SECRET_KEY, algorithms=[ALGORITHM])
         username:str=payload.get("sub")
         role:str=payload.get("role")
         if username is None or role is None:
@@ -83,12 +83,12 @@ def get_current_user(token: str=Depends(oauth2_scheme)):
 
 @app.get("/protected")
 def protected_route(current_user:dict= Depends(get_current_user)):
-    return{"messege":f"Hello,{current_user['username']} | You accessed a protected route"}
+    return{"message":f"Hello,{current_user['username']} | You accessed a protected route"}
 
-def require_roles(alloed_roles:list[str]):
+def require_roles(allowed_roles:list[str]):
     def role_checker(current_user: dict= Depends(get_current_user)):
         user_role = current_user.get("role")
-        if user_role not in alloed_roles:
+        if user_role not in allowed_roles:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not enough permission")
         
         return current_user
@@ -96,7 +96,7 @@ def require_roles(alloed_roles:list[str]):
 
 @app.get("/profile")
 def profile(current_user:dict = Depends(require_roles(["user","admin"]))):
-    return{"messege":f"Profile of{current_user['usrname']} ({current_user['role']})"}
+    return{"messege":f"Profile of{current_user['username']} ({current_user['role']})"}
 
 @app.get("/user/dashboard")
 def user_dashboard(current_user:dict=Depends(require_roles(["user"]))):
